@@ -6,13 +6,14 @@ generator client {
 }
 
 datasource db {
-  provider     = "mysql"
-  url          = env("DATABASE_URL")
-  relationMode = "prisma"
+  provider          = "mysql"
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+  url               = env("DATABASE_URL")
+  relationMode      = "prisma"
 }
 
 model User {
-  id                 String              @id @default(dbgenerated("(UUID())"))
+  id                 String              @id @default(uuid())
   name               String
   email              String              @unique
   password           String              @default("")
@@ -27,8 +28,15 @@ model User {
   transaction        Transaction[]
 }
 
+model UserTest {
+  id       String @id @default(uuid())
+  name     String
+  email    String
+  password String @default("")
+}
+
 model UserOnboarding {
-  id        String  @id @default(dbgenerated("(UUID())"))
+  id        String  @id @default(uuid())
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String  @unique
   journey   Json
@@ -36,7 +44,7 @@ model UserOnboarding {
 }
 
 model UserAnalytics {
-  id          String @id @default(dbgenerated("(UUID())"))
+  id          String @id @default(uuid())
   userId      String @unique
   totalSales  Int
   totalOrder  Int
@@ -46,7 +54,7 @@ model UserAnalytics {
 }
 
 model UserPaymentDetails {
-  id      String @id @default(dbgenerated("(UUID())"))
+  id      String @id @default(uuid())
   userId  String @unique
   mode    String
   address Json
@@ -54,7 +62,7 @@ model UserPaymentDetails {
 }
 
 model UserPayouts {
-  id            String @id @default(dbgenerated("(UUID())"))
+  id            String @id @default(uuid())
   userId        String @unique
   amountPaid    String
   transactionId String
@@ -64,7 +72,7 @@ model UserPayouts {
 }
 
 model Store {
-  id               String         @id @default(dbgenerated("(UUID())"))
+  id               String         @id @default(uuid())
   name             String
   location         String
   slug             String         @unique
@@ -91,7 +99,7 @@ model Store {
 }
 
 model StorePage {
-  id             String @id @default(dbgenerated("(UUID())"))
+  id             String @id @default(uuid())
   name           String
   schema         Json?
   storeId        String
@@ -104,19 +112,18 @@ model StorePage {
 }
 
 model BaseProduct {
-  id          String  @id @default(dbgenerated("(UUID())"))
-  name        String
-  country     Json
-  category    String
-  status      Boolean
-  isSizeChart Boolean
-  sizeChart   String?
-  description String? @db.VarChar(2000)
-  maxPriceINR Float?
-  minPriceINR Float?
-  maxPriceUSD Float?
-  minPriceUSD Float?
-
+  id                 String              @id @default(uuid())
+  name               String              @unique()
+  country            Json
+  category           String
+  status             Boolean
+  isSizeChart        Boolean
+  sizeChart          String?
+  description        String?             @db.VarChar(2000)
+  maxPriceINR        Float?
+  minPriceINR        Float?
+  maxPriceUSD        Float?
+  minPriceUSD        Float?
   baseProductOptions BaseProductOption[]
   variant            Variant[]
   productImages      ProductImages[]
@@ -124,7 +131,7 @@ model BaseProduct {
 }
 
 model BaseProductOption {
-  id            String        @id @default(dbgenerated("(UUID())"))
+  id            String        @id @default(uuid())
   name          String
   baseProductId String
   baseProduct   BaseProduct   @relation(fields: [baseProductId], references: [id], onDelete: Cascade)
@@ -134,7 +141,7 @@ model BaseProductOption {
 }
 
 model OptionValue {
-  id       String               @id @default(dbgenerated("(UUID())"))
+  id       String               @id @default(uuid())
   value    String
   optionId String
   option   BaseProductOption    @relation(fields: [optionId], references: [id], onDelete: Cascade)
@@ -144,7 +151,7 @@ model OptionValue {
 }
 
 model ProductImages {
-  id            String         @id @default(dbgenerated("(UUID())"))
+  id            String         @id @default(uuid())
   modalImageUrl String
   maskImageUrl  String?
   top           Float
@@ -159,7 +166,7 @@ model ProductImages {
 }
 
 model Variant {
-  id            String               @id @default(dbgenerated("(UUID())"))
+  id            String               @id @default(uuid())
   name          String
   priceINR      Float?
   priceUSD      Float?
@@ -196,7 +203,7 @@ model VariantOptionValue {
 }
 
 model Design {
-  id                        String         @id @default(dbgenerated("(UUID())"))
+  id                        String         @id @default(uuid())
   title                     String
   description               String         @db.VarChar(1000)
   designImage               String
@@ -212,13 +219,14 @@ model Design {
 }
 
 model StoreProduct {
-  id             String  @id @default(dbgenerated("(UUID())"))
+  id             String  @id @default(uuid())
   storeId        String
   baseProductId  String
   designId       String
   profitPriceINR Float?
   profitPriceUSD Float?
-  generatedImage String?
+  status         String  @default("draft")
+  generatedImage String? @db.VarChar(255)
   isDesignOwner  Boolean
 
   store         Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
@@ -234,7 +242,7 @@ model StoreProduct {
 }
 
 model StoreVariant {
-  id             String          @id @default(dbgenerated("(UUID())"))
+  id             String          @id @default(uuid())
   storeProductId String
   variantId      String
   variant        Variant         @relation(fields: [variantId], references: [id], onDelete: Cascade)
@@ -246,7 +254,7 @@ model StoreVariant {
 }
 
 model Orders {
-  id            String   @unique @default(dbgenerated("(UUID())"))
+  id            String   @unique @default(uuid())
   orderNo       Int      @id @default(autoincrement())
   storeId       String
   customerId    String?
@@ -273,7 +281,7 @@ model Orders {
 }
 
 model TrackingDetail {
-  id          String @id @default(dbgenerated("(UUID())"))
+  id          String @id @default(uuid())
   courierName String
   trackingURL String
   orderId     String
@@ -285,7 +293,7 @@ model TrackingDetail {
 }
 
 model Transaction {
-  id        String   @id @default(dbgenerated("(UUID())"))
+  id        String   @id @default(uuid())
   type      String
   amount    Float
   credit    Boolean
@@ -302,7 +310,7 @@ model Transaction {
 }
 
 model OrderProducts {
-  id               String        @id @default(dbgenerated("(UUID())"))
+  id               String        @id @default(uuid())
   orderId          String
   storeProductId   String?
   storeVariantId   String?
@@ -311,7 +319,7 @@ model OrderProducts {
   count            Int
   storeProductName String
   storeVariantName String
-  productImage     String        @default("https://cdn.pixabay.com/photo/2016/10/10/14/46/icon-1728552_640.jpg")
+  productImage     String        @default("https://cdn.pixabay.com/photo/2016/10/10/14/46/icon-1728552_640.jpg") @db.VarChar(255)
   designName       String
   orders           Orders        @relation(fields: [orderId], references: [id], onDelete: Cascade)
   storeProduct     StoreProduct? @relation(fields: [storeProductId], references: [id], onDelete: SetNull)
