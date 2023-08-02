@@ -18,7 +18,9 @@ const corsOptions = {
 app.use(cors(corsOptions));
 // Routes starts here
 app.get("/", async(req, res) => {
-    return res.status(200).json("success");
+    const order = await prisma.orders.findFirst()
+
+    return res.status(200).json({orders:order});
 })
 app.post("/screenshot/order", async (req, res) => {
     try {
