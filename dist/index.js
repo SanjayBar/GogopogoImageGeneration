@@ -30,7 +30,7 @@ app.post("/screenshot/order", async (req, res) => {
         const puppeteer = require("puppeteer");
         const browser = await puppeteer.launch({ headless: "new" });
         const page = await browser.newPage();
-        await page.goto(`http://localhost:3000/screen__shot/${subDomain}/orderImageGeneration/${orderId}`);
+        await page.goto(`https://gogopogo.ai/screen__shot/${subDomain}/orderImageGeneration/${orderId}`);
         const totalproducts = orderProducts.length;
         let arr = [];
         const data = await Promise.all(orderProducts.map(async (item) => {
@@ -81,7 +81,7 @@ app.post("/screenshot/order", async (req, res) => {
     }
 });
 function createUrl(storeId, storeProducts) {
-    let url = `http://localhost:3000/screen__shot/storeProductImageGeneration?storeId=${storeId}`;
+    let url = `https://gogopogo.ai/screen__shot/storeProductImageGeneration?storeId=${storeId}`;
     storeProducts.forEach((product, index) => {
         if (product.id) {
             url += `&storeProductId=${product.id}`;
