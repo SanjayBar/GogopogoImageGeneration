@@ -1,0 +1,331 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider          = "mysql"
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+  url               = env("DATABASE_URL")
+  relationMode      = "prisma"
+}
+
+model User {
+  id                 String              @id @default(uuid())
+  name               String
+  email              String              @unique
+  password           String              @default("")
+  whatsapp           Int?
+  type               String              @default("creator")
+  firstlogin         Boolean             @default(false)
+  Store              Store?
+  analytics          UserAnalytics?
+  UserOnboarding     UserOnboarding?
+  UserPayouts        UserPayouts?
+  UserPaymentDetails UserPaymentDetails?
+  transaction        Transaction[]
+}
+
+model UserTest {
+  id       String @id @default(uuid())
+  name     String
+  email    String
+  password String @default("")
+}
+
+model UserOnboarding {
+  id        String  @id @default(uuid())
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String  @unique
+  journey   Json
+  completed Boolean
+}
+
+model UserAnalytics {
+  id          String @id @default(uuid())
+  userId      String @unique
+  totalSales  Int
+  totalOrder  Int
+  totalProfit Int
+  wallet      Int
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserPaymentDetails {
+  id      String @id @default(uuid())
+  userId  String @unique
+  mode    String
+  address Json
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserPayouts {
+  id            String @id @default(uuid())
+  userId        String @unique
+  amountPaid    String
+  transactionId String
+  mode          String
+  modeAddress   String
+  user          User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Store {
+  id               String         @id @default(uuid())
+  name             String
+  location         String
+  slug             String         @unique
+  // One user can have only one Store
+  ownerId          String         @unique
+  logo             String         @default("https://www.nicepng.com/png/detail/246-2467547_your-logo-here-your-logo-here-logo-png.png")
+  metadata         Json?
+  storeDescription String         @default("")
+  announcementBar  Json           @default("{}")
+  socialmedia      Json           @default("{}")
+  owner            User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  themecolor       String         @default("#3949ab")
+  footer           Json           @default("{}")
+  orders           Orders[]
+  storePage        StorePage[]
+  design           Design[]
+  storeProduct     StoreProduct[]
+  storeStyles      Json           @default("{\"ppage\": \"Manali\", \"pcard\": \"Kaziranga\"}")
+  websiteid        String?
+  shareUrl         String?
+
+  @@index([ownerId])
+  @@index([slug])
+}
+
+model StorePage {
+  id             String @id @default(uuid())
+  name           String
+  schema         Json?
+  storeId        String
+  store          Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  slug           String @default("")
+  defaultSection Json?
+
+  @@unique([slug, storeId])
+  @@index([storeId])
+}
+
+model BaseProduct {
+  id                 String              @id @default(uuid())
+  name               String              @unique()
+  country            Json
+  category           String
+  status             Boolean
+  isSizeChart        Boolean
+  sizeChart          String?
+  description        String?             @db.VarChar(2000)
+  maxPriceINR        Float?
+  minPriceINR        Float?
+  maxPriceUSD        Float?
+  minPriceUSD        Float?
+  baseProductOptions BaseProductOption[]
+  variant            Variant[]
+  productImages      ProductImages[]
+  storeProducts      StoreProduct[]
+}
+
+model BaseProductOption {
+  id            String        @id @default(uuid())
+  name          String
+  baseProductId String
+  baseProduct   BaseProduct   @relation(fields: [baseProductId], references: [id], onDelete: Cascade)
+  optionValues  OptionValue[]
+
+  @@index([baseProductId])
+}
+
+model OptionValue {
+  id       String               @id @default(uuid())
+  value    String
+  optionId String
+  option   BaseProductOption    @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  variants VariantOptionValue[]
+
+  @@index(optionId)
+}
+
+model ProductImages {
+  id            String         @id @default(uuid())
+  modalImageUrl String
+  maskImageUrl  String?
+  top           Float
+  right         Float
+  bottom        Float
+  left          Float
+  baseProductId String
+  baseProduct   BaseProduct    @relation(fields: [baseProductId], references: [id], onDelete: Cascade)
+  variantImage  VariantImage[]
+
+  @@index([baseProductId])
+}
+
+model Variant {
+  id            String               @id @default(uuid())
+  name          String
+  priceINR      Float?
+  priceUSD      Float?
+  active        Boolean              @default(false)
+  baseProductId String
+  baseProduct   BaseProduct          @relation(fields: [baseProductId], references: [id], onDelete: Cascade)
+  optionValues  VariantOptionValue[]
+  variantImages VariantImage[]
+  storeVariants StoreVariant[]
+
+  @@index([baseProductId])
+}
+
+model VariantImage {
+  variantId      String
+  variant        Variant       @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  productImageId String
+  productImages  ProductImages @relation(fields: [productImageId], references: [id], onDelete: Cascade)
+
+  @@id([variantId, productImageId])
+  @@index([variantId])
+  @@index([productImageId])
+}
+
+model VariantOptionValue {
+  variantId     String
+  optionValueId String
+  variant       Variant     @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  optionValue   OptionValue @relation(fields: [optionValueId], references: [id], onDelete: Cascade)
+
+  @@id([variantId, optionValueId])
+  @@index([variantId])
+  @@index([optionValueId])
+}
+
+model Design {
+  id                        String         @id @default(uuid())
+  title                     String
+  description               String         @db.VarChar(1000)
+  designImage               String
+  category                  String
+  storeId                   String
+  enableDesignInMarketPlace Boolean        @default(false)
+  designPriceINR            Float?
+  designPriceUSD            Float?
+  store                     Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  storeProducts             StoreProduct[]
+
+  @@index([storeId])
+}
+
+model StoreProduct {
+  id             String  @id @default(uuid())
+  storeId        String
+  baseProductId  String
+  designId       String
+  profitPriceINR Float?
+  profitPriceUSD Float?
+  status         String  @default("draft")
+  generatedImage String? @db.VarChar(255)
+  isDesignOwner  Boolean
+
+  store         Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  baseProduct   BaseProduct     @relation(fields: [baseProductId], references: [id], onDelete: Cascade)
+  design        Design          @relation(fields: [designId], references: [id], onDelete: Cascade)
+  storeVariants StoreVariant[]
+  orderProducts OrderProducts[]
+
+  @@unique([storeId, baseProductId, designId])
+  @@index([storeId])
+  @@index([baseProductId])
+  @@index([designId])
+}
+
+model StoreVariant {
+  id             String          @id @default(uuid())
+  storeProductId String
+  variantId      String
+  variant        Variant         @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  storeProduct   StoreProduct    @relation(fields: [storeProductId], references: [id], onDelete: Cascade)
+  orderProducts  OrderProducts[]
+
+  @@index([storeProductId])
+  @@index([variantId])
+}
+
+model Orders {
+  id            String   @unique @default(uuid())
+  orderNo       Int      @id @default(autoincrement())
+  storeId       String
+  customerId    String?
+  state         String
+  country       String
+  pinCode       String
+  city          String
+  address       String
+  phoneNo       String
+  email         String
+  fullName      String
+  commissionINR Float?
+  commissionUSD Float?
+  status        String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  store          Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  orderProducts  OrderProducts[]
+  trackingDetail TrackingDetail[]
+  transaction    Transaction[]
+
+  @@index([storeId])
+}
+
+model TrackingDetail {
+  id          String @id @default(uuid())
+  courierName String
+  trackingURL String
+  orderId     String
+
+  order Orders @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([trackingURL, orderId])
+  @@index([orderId])
+}
+
+model Transaction {
+  id        String   @id @default(uuid())
+  type      String
+  amount    Float
+  credit    Boolean
+  orderId   String
+  userId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order Orders @relation(fields: [orderId], references: [id], onDelete: NoAction)
+  user  User   @relation(fields: [userId], references: [id], onDelete: NoAction)
+
+  @@index([orderId])
+  @@index([userId])
+}
+
+model OrderProducts {
+  id               String        @id @default(uuid())
+  orderId          String
+  storeProductId   String?
+  storeVariantId   String?
+  productPriceINR  Float
+  productPriceUSD  Float
+  count            Int
+  storeProductName String
+  storeVariantName String
+  productImage     String        @default("https://cdn.pixabay.com/photo/2016/10/10/14/46/icon-1728552_640.jpg") @db.VarChar(255)
+  designName       String
+  orders           Orders        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  storeProduct     StoreProduct? @relation(fields: [storeProductId], references: [id], onDelete: SetNull)
+  storeVariant     StoreVariant? @relation(fields: [storeVariantId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([storeProductId])
+  @@index([storeVariantId])
+}
