@@ -11,6 +11,7 @@ import {
 } from "./config/firebase.config.js";
 
 import prisma from "./lib/prisma.js";
+import { client } from "./lib/sanity.js";
 
 dotenv.config();
 
@@ -203,6 +204,85 @@ app.post("/screenshot/storeProduct", async (req: Request, res: Response) => {
     return res.status(201).json("success");
   } catch (error) {
     res.status(500).send("Internal Server Error");
+  }
+});
+
+// Generate photo frames
+function createUrlParams(obj: any) {
+  const params = Object.entries(obj)
+    .map(([key, value]) => `${key}=${value}`)
+    .join("&");
+
+  return `?${params}`;
+}
+app.post("/screenshot/photoframe", async (req: Request, res: Response) => {
+  const { name, ...rest } = req.body;
+  const paramsUrl = createUrlParams(rest);
+  const _id = req.body._id;
+
+  console.log(rest);
+
+  const pageUrl = "http://localhost:3001/generator" + `${paramsUrl}`;
+
+  try {
+    const puppeteer = require("puppeteer");
+
+    const browser = await puppeteer.launch({ headless: "new" });
+    const page = await browser.newPage();
+
+    await page.goto(pageUrl);
+
+    const selector1 = "#FirstImage";
+    await page.waitForSelector(selector1);
+    const element1 = await page.$(selector1);
+    const screenshot1 = element1.screenshot();
+
+    const selector2 = "#SecondImage";
+    await page.waitForSelector(selector2);
+    const element2 = await page.$(selector2);
+    const screenshot2 = element2.screenshot();
+
+    const [ss1, ss2] = await Promise.all([screenshot1, screenshot2]);
+
+    const imageAssetPromise1 = client.assets.upload("image", ss1, {
+      filename: `${req.body.photo}-${req.body.frame_1}`,
+    });
+    const imageAssetPromise2 = client.assets.upload("image", ss2, {
+      filename: `${req.body.photo}-${req.body.frame_2}`,
+    });
+    const [imageAsset1, imageAsset2] = await Promise.all([
+      imageAssetPromise1,
+      imageAssetPromise2,
+    ]);
+
+    await client
+      .patch(_id)
+      .set({
+        images: [
+          {
+            _type: "image",
+            alt: name,
+            asset: {
+              _type: "reference",
+              _ref: imageAsset1._id,
+            },
+          },
+          {
+            _type: "image",
+            alt: name,
+            asset: {
+              _type: "reference",
+              _ref: imageAsset2._id,
+            },
+          },
+        ],
+      })
+      .commit({ autoGenerateArrayKeys: true });
+
+    await browser.close();
+    return res.status(201).json("success");
+  } catch (error) {
+    res.status(500).send(error);
   }
 });
 
